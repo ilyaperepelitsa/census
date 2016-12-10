@@ -7,6 +7,7 @@ library(sp)
 library(tigris)
 library(ggplot2)
 library(dplyr)
+library(tidyr)
 
 ##### CONDO UNRELATED #######
 colnames(condo1)
@@ -202,3 +203,124 @@ data <- left_join(tracts, data)
 write.csv(data, "/Users/ilyaperepelitsa/quant/census/family_size.csv", row.names = FALSE)
 
 
+
+
+
+
+data  <- acs.fetch(geography = geog, endyear = 2015, span = 5,
+                   table.number = "B08101", col.names = "pretty")
+
+data <- as.data.frame(estimate(data))
+
+total <- data[,1]
+car_alone <- data[,9]
+car_pooled <- data[,17]
+public <- data[,25]
+walked <- data[,33]
+
+data <- data.frame(rownames(data), total, car_alone,
+                   car_pooled, public, walked,
+                   row.names = NULL)
+data$car_alone <- car_alone/total
+data$car_pooled <- car_pooled/total 
+data$public <- public/total
+data$walked <- walked/total
+colnames(data)[1] <- "census_tract"
+
+data <- data %>% filter(walked != "NaN")
+data <- left_join(tracts, data)
+write.csv(data, "/Users/ilyaperepelitsa/quant/census/transportation.csv", row.names = FALSE)
+
+
+### TRANSPORTATION
+data1 <- data %>% filter(!is.na(car_alone)) %>% 
+  gather("transportation", "proportion", 6:9)
+
+for (i in 1:length(unique(data1$transportation))){
+  
+  plot <- data1 %>%  filter(transportation == unique(data1$transportation)[i]) %>% 
+  ggplot(aes(x = reorder(borough, -proportion),
+             y = proportion,
+             fill = borough)) +
+  geom_boxplot() +
+    ggtitle(unique(data1$transportation)[i])
+  print(plot)
+  ggsave(paste("/Users/ilyaperepelitsa/quant/census/",
+               unique(data1$transportation)[i],
+               ".jpg", sep = ""),
+         plot, height = 10, width = 7)
+}
+
+
+
+### DISABILITY
+data <- read.csv("/Users/ilyaperepelitsa/quant/census/disability.csv")
+data1 <- data %>% filter(!is.na(disability)) 
+
+  
+  plot <- data1 %>%  
+    ggplot(aes(x = reorder(borough, -disability),
+               y = disability,
+               fill = borough)) +
+    geom_boxplot() +
+    ggtitle("disability")
+  print(plot)
+  ggsave("/Users/ilyaperepelitsa/quant/census/disability.jpg",
+         plot, height = 10, width = 7)
+
+### FAMILY SIZE
+data <- read.csv("/Users/ilyaperepelitsa/quant/census/family_size.csv")
+data1 <- data %>% filter(!is.na(sixplus)) %>% 
+  gather("family_size", "proportion", 5:7)
+
+for (i in 1:length(unique(data1$family_size))){
+  
+  plot <- data1 %>%  filter(family_size == unique(data1$family_size)[i]) %>% 
+    ggplot(aes(x = reorder(borough, -proportion),
+               y = proportion,
+               fill = borough)) +
+    geom_boxplot() +
+    ggtitle(unique(data1$family_size)[i])
+  print(plot)
+  ggsave(paste("/Users/ilyaperepelitsa/quant/census/",
+               unique(data1$family_size)[i],
+               ".jpg", sep = ""),
+         plot, height = 10, width = 7)
+}
+
+
+### NON-FAMILY
+data <- read.csv("/Users/ilyaperepelitsa/quant/census/non_family.csv")
+data1 <- data %>% filter(!is.na(non_family)) 
+
+
+plot <- data1 %>%  
+  ggplot(aes(x = reorder(borough, -non_family),
+             y = non_family,
+             fill = borough)) +
+  geom_boxplot() +
+  ggtitle("non_family")
+print(plot)
+ggsave("/Users/ilyaperepelitsa/quant/census/non_family.jpg",
+       plot, height = 10, width = 7)
+
+
+### MARITAL
+data <- read.csv("/Users/ilyaperepelitsa/quant/census/marital.csv")
+data1 <- data %>% filter(!is.na(divorced)) %>% 
+  gather("status", "proportion", 5:7)
+
+for (i in 1:length(unique(data1$status))){
+  
+  plot <- data1 %>%  filter(status == unique(data1$status)[i]) %>% 
+    ggplot(aes(x = reorder(borough, -proportion),
+               y = proportion,
+               fill = borough)) +
+    geom_boxplot() +
+    ggtitle(unique(data1$status)[i])
+  print(plot)
+  ggsave(paste("/Users/ilyaperepelitsa/quant/census/",
+               unique(data1$status)[i],
+               ".jpg", sep = ""),
+         plot, height = 10, width = 7)
+}
