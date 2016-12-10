@@ -1,6 +1,10 @@
 condo <- read.csv("~/xport/csv/condo.csv")
 coop <- read.csv("~/xport/csv/coop.csv")
 options(scipen = 999)
+install.packages("sp")
+install.packages("tigris")
+library(sp)
+library(tigris)
 library(ggplot2)
 library(dplyr)
 
@@ -43,7 +47,8 @@ library(acs)
 key1 <- "ada405bf8fc62b3fda4767166b3761e198ed6f61"
 
 api.key.install(key = key1)
-tracts <- read.csv("/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv", row.names = FALSE)
+tracts <- read.csv("/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv", row.names = NULL)
+dfw <- tracts(state = "NY", county = c("Bronx", "Queens", "Kings", "New York"))
 geog <- geo.make(state="NY", county=c("Bronx", "Queens", "Kings", "New York"), tract="*")
 # geo.lookup(state="NY", county="Bronx", tract="*")
 
@@ -54,23 +59,53 @@ geog <- geo.make(state="NY", county=c("Bronx", "Queens", "Kings", "New York"), t
 # Means of Tansportation B08101
 # Family and nonfamily households B09019
 
-data  <- acs.fetch(geography = geog, endyear = 2015,
-                               table.number = "B01003", col.names = "pretty")
+data  <- acs.fetch(geography = geog, endyear = 2015, span = 5,
+                               table.number = "B08101", col.names = "pretty")
+
+# data@geography$county <- as.character(data@geography$county)
+# for (i in 1:length(data@geography$county)){
+#   if (nchar(data@geography$county[i]) == 1) {
+#     data@geography$county[i] <- paste("00", data@geography$county[i], sep = "")
+#   } else {
+#     data@geography$county[i] <- paste("0", data@geography$county[i], sep = "")
+#   }
+#   
+# } 
+
+class(data@geography$county)
 
 data <- as.data.frame(estimate(data))
+disab1 <- data[,c(seq(4,19,3))]
+disab2 <- data[,c(seq(23,39,3))]
+disab3 <- vector
+
+disab1[,7] <- disab1[,1] + disab1[,2] + disab1[,3] + disab1[,4] + disab1[,5] + disab1[,6]
+disab2[,7] <- disab2[,1] + disab2[,2] + disab2[,3] + disab2[,4] + disab2[,5] + disab2[,6]
+disab_total <- disab1[,7] + disab2[,7]
+data[,2] <- disab_total
+disability <- data.frame(rownames(data), data[,1], data[,2], row.names = NULL)
+colnames(disability) <- c("census_tract", "total", "disability")
+disability$disability <- disability$disability/disability$total
+data <- left_join(tracts, disability, by = "census_tract")
+
 data <- data.frame(rownames(data), data, row.names = NULL)
+# tracts[,2] <- as.character(tracts[,2])
+# data[,1] <- as.character(data[,1])
 
-data <- left_join(tracts, data)
+colnames(data) <- c("census_tract", "data")
+data <- left_join(tracts, data, by = "census_tract")
+data <- data %>% filter(disability != "NaN") %>% select(GEOID, disability)
 
+write.csv(data, "/Users/ilyaperepelitsa/quant/census/disability.csv", row.names = FALSE)
 
-# popdf <- data.frame(paste0(as.character(population@geography$state),
-#                            as.character(population@geography$county),
-#                            population@geography$tract),
-#                     rownames(as.data.frame(estimate(population))),
-#                     unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))[seq(2, length( unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))), 3)],
-#                     population@estimate, row.names = NULL)
-# colnames(popdf) <- c("BoroCT2010", "census_tract", "borough", "total_population")
-# write.csv(popdf, "/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv")
+# popdf <- data.frame(paste0(as.character(data@geography$state),
+#                            as.character(data@geography$county),
+#                            as.character(data@geography$tract)),
+#                     rownames(as.data.frame(estimate(data))),
+#                     unlist(strsplit(rownames(as.data.frame(estimate(data))), ","))[seq(2, length( unlist(strsplit(rownames(as.data.frame(estimate(data))), ","))), 3)],
+#                     data@estimate, row.names = NULL)
+# colnames(popdf) <- c("GEOID", "census_tract", "borough", "total_population")
+# write.csv(popdf, "/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv", row.names = FALSE)
 # 
 # columns <- unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))[seq(2, length( unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))), 3)]
 
@@ -89,7 +124,7 @@ county <- columns[seq(2, length(columns), 3)]
 state <-  columns[seq(3, length(columns), 3)]
 where <- data.frame(full, tract, county, state)
 ctract <- left_join(where, boroughs, by = "full")
-write.csv(ctract, "/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv")
+write.csv(ctract, "/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv", row.names = FALSE)
 
 population <- data.frame(full, tract, county, state, population, row.names = NULL) 
 colnames(population) <- c("full", "census_tract", "county", "state", "population")
@@ -97,29 +132,73 @@ colnames(population) <- c("full", "census_tract", "county", "state", "population
 write.csv(population, "/Users/ilyaperepelitsa/population.csv")
 
 
+
+
 pew <- acs.fetch(geography = geog, endyear = 2015,
-                 table.number = "B08101", col.names = "pretty")
+                 table.number = "B12001", col.names = "pretty")
 View(as.data.frame(estimate(pew)))
 
-bronxnew <- as.data.frame(estimate(pew))
-bronxmarital <- bronxnew[,c(1,3,4,10,12,13,19)]
-bronxmarital <- bronxmarital %>%
-  mutate(never_married = (bronxmarital[,2]+bronxmarital[,5])/bronxmarital[,1],
-         now_married   = (bronxmarital[,3]+bronxmarital[,6])/bronxmarital[,1],
-         divorced      = (bronxmarital[,4]+bronxmarital[,7])/bronxmarital[,1])
-bronxmarital <- bronxmarital[,8:10]
+pew <- as.data.frame(estimate(pew))
+data <- data[,c(1,3,4,10,12,13,19)]
+data <- data %>%
+  mutate(never_married = (data[,2]+data[,5])/data[,1],
+         now_married   = (data[,3]+data[,6])/data[,1],
+         divorced      = (data[,4]+data[,7])/data[,1])
+data <- data[,8:10]
 
+data$census_tract <- rownames(pew)
 
-columns <- unlist(strsplit(rownames(as.data.frame(estimate(pew))), ","))
-tract <- bronnn[seq(1, length(bronnn), 3)]
-county <- bronnn[seq(2, length(bronnn), 3)]
-state <- bronnn[seq(3, length(bronnn), 3)]
+data <- data %>% select(c(census_tract, never_married, now_married, divorced))
+# data <- read.csv("/Users/ilyaperepelitsa/quant/census/disability.csv", row.names = NULL)
+data <- left_join(tracts, data)
+write.csv(data, "/Users/ilyaperepelitsa/quant/census/marital.csv", row.names = FALSE)
+# 
+# columns <- unlist(strsplit(rownames(as.data.frame(estimate(pew))), ","))
+# tract <- bronnn[seq(1, length(bronnn), 3)]
+# county <- bronnn[seq(2, length(bronnn), 3)]
+# state <- bronnn[seq(3, length(bronnn), 3)]
 #data.frame(tract, county, state)
 
 colnames(bronxnew) = c("census_tract", "county", "state", "population")
 
-                       
 
 
-acs.lookup(endyear=2014, keyword="marital")
+
+
+
+
+
+data  <- acs.fetch(geography = geog, endyear = 2015, span = 5,
+                   table.number = "B11016", col.names = "pretty")
+data <- as.data.frame(estimate(data))
+
+
+# household (roommates)
+data <- data.frame(rownames(data), data[, 9]/data[, 1])
+
+data <- data %>% filter(data[,2] != "NaN")
+
+colnames(data) <- c("census_tract", "non_family")
+data <- left_join(tracts, data)
+write.csv(data, "/Users/ilyaperepelitsa/quant/census/non_family.csv", row.names = FALSE)
+
+
+
+data  <- acs.fetch(geography = geog, endyear = 2015, span = 5,
+                   table.number = "B11016", col.names = "pretty")
+
+data <- as.data.frame(estimate(data))
+
+
+# household (roommates)
+two_three <- (data[,3] + data[,4]) / data[ ,2]
+four_five <- (data[,5] + data[,6]) / data[ ,2]
+sixplus <-   (data[,7] + data[,8]) / data[ ,2]
+data <- data_frame(rownames(data), two_three, four_five, sixplus)
+data <- data %>% filter(data[,2] != "NaN")
+
+colnames(data)[1] <- c("census_tract")
+data <- left_join(tracts, data)
+write.csv(data, "/Users/ilyaperepelitsa/quant/census/family_size.csv", row.names = FALSE)
+
 
