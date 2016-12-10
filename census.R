@@ -43,7 +43,7 @@ library(acs)
 key1 <- "ada405bf8fc62b3fda4767166b3761e198ed6f61"
 
 api.key.install(key = key1)
-
+tracts <- read.csv("/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv", row.names = FALSE)
 geog <- geo.make(state="NY", county=c("Bronx", "Queens", "Kings", "New York"), tract="*")
 # geo.lookup(state="NY", county="Bronx", tract="*")
 
@@ -59,6 +59,8 @@ data  <- acs.fetch(geography = geog, endyear = 2015,
 
 data <- as.data.frame(estimate(data))
 data <- data.frame(rownames(data), data, row.names = NULL)
+
+data <- left_join(tracts, data)
 
 
 # popdf <- data.frame(paste0(as.character(population@geography$state),
