@@ -44,11 +44,59 @@ key1 <- "ada405bf8fc62b3fda4767166b3761e198ed6f61"
 
 api.key.install(key = key1)
 
-bronx <- geo.make(state="NY", county=c("Bronx", "Queens", "Kings", "New York"), tract="*")
-geo.lookup(state="NY", county="Bronx", tract="*")
+geog <- geo.make(state="NY", county=c("Bronx", "Queens", "Kings", "New York"), tract="*")
+# geo.lookup(state="NY", county="Bronx", tract="*")
 
-pew <- acs.fetch(geography=bronx, endyear=2014,
-                 table.number="B12001", col.names="pretty")
+# Total population B01003
+# Disability sex age B18101
+# Marital B12001
+# Household size B11016
+# Means of Tansportation B08101
+# Family and nonfamily households B09019
+
+data  <- acs.fetch(geography = geog, endyear = 2015,
+                               table.number = "B01003", col.names = "pretty")
+
+data <- as.data.frame(estimate(data))
+data <- data.frame(rownames(data), data, row.names = NULL)
+
+
+# popdf <- data.frame(paste0(as.character(population@geography$state),
+#                            as.character(population@geography$county),
+#                            population@geography$tract),
+#                     rownames(as.data.frame(estimate(population))),
+#                     unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))[seq(2, length( unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))), 3)],
+#                     population@estimate, row.names = NULL)
+# colnames(popdf) <- c("BoroCT2010", "census_tract", "borough", "total_population")
+# write.csv(popdf, "/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv")
+# 
+# columns <- unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))[seq(2, length( unlist(strsplit(rownames(as.data.frame(estimate(population))), ","))), 3)]
+
+# boroughs <- population@geography[,c(1, 4)]
+# colnames(boroughs) <- c("full", "tract")
+tracts <- read.csv("/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv")
+# population@geography
+# population@span
+population <- as.data.frame(estimate(population))
+population <- data.frame(rownames(population), population, row.names = NULL)
+
+columns <- rownames(population)
+full <- rownames(population)
+tract <-  columns[seq(1, length(columns), 3)]
+county <- columns[seq(2, length(columns), 3)]
+state <-  columns[seq(3, length(columns), 3)]
+where <- data.frame(full, tract, county, state)
+ctract <- left_join(where, boroughs, by = "full")
+write.csv(ctract, "/Users/ilyaperepelitsa/quant/census/tracts_nyc.csv")
+
+population <- data.frame(full, tract, county, state, population, row.names = NULL) 
+colnames(population) <- c("full", "census_tract", "county", "state", "population")
+
+write.csv(population, "/Users/ilyaperepelitsa/population.csv")
+
+
+pew <- acs.fetch(geography = geog, endyear = 2015,
+                 table.number = "B08101", col.names = "pretty")
 View(as.data.frame(estimate(pew)))
 
 bronxnew <- as.data.frame(estimate(pew))
@@ -60,7 +108,7 @@ bronxmarital <- bronxmarital %>%
 bronxmarital <- bronxmarital[,8:10]
 
 
-bronnn <- unlist(strsplit(rownames(as.data.frame(estimate(pew))), ","))
+columns <- unlist(strsplit(rownames(as.data.frame(estimate(pew))), ","))
 tract <- bronnn[seq(1, length(bronnn), 3)]
 county <- bronnn[seq(2, length(bronnn), 3)]
 state <- bronnn[seq(3, length(bronnn), 3)]
