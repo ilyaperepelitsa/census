@@ -8,6 +8,7 @@ library(tigris)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+source("/Users/ilyaperepelitsa/quant/census/hear_theme.R")
 
 ##### CONDO UNRELATED #######
 colnames(condo1)
@@ -95,9 +96,19 @@ data <- data.frame(rownames(data), data, row.names = NULL)
 
 colnames(data) <- c("census_tract", "data")
 data <- left_join(tracts, data, by = "census_tract")
+data <- data %>% filter(disability != "NaN")
 data <- data %>% filter(disability != "NaN") %>% select(GEOID, disability)
 
 write.csv(data, "/Users/ilyaperepelitsa/quant/census/disability.csv", row.names = FALSE)
+
+
+
+
+
+
+
+
+
 
 # popdf <- data.frame(paste0(as.character(data@geography$state),
 #                            as.character(data@geography$county),
@@ -233,24 +244,37 @@ write.csv(data, "/Users/ilyaperepelitsa/quant/census/transportation.csv", row.na
 
 
 ### TRANSPORTATION
+data <- read.csv("/Users/ilyaperepelitsa/quant/census/transportation.csv")
 data1 <- data %>% filter(!is.na(car_alone)) %>% 
   gather("transportation", "proportion", 6:9)
 
 for (i in 1:length(unique(data1$transportation))){
-  
-  plot <- data1 %>%  filter(transportation == unique(data1$transportation)[i]) %>% 
-  ggplot(aes(x = reorder(borough, -proportion),
+  title_some <- 
+  plot <- data1 %>% 
+    filter(transportation == unique(data1$transportation)[i]) %>% 
+  ggplot(aes(x = reorder(borough, proportion),
              y = proportion,
              fill = borough)) +
   geom_boxplot() +
-    ggtitle(unique(data1$transportation)[i])
-  print(plot)
+  ggtitle(paste('\"', paste(str_to_title(unlist(strsplit(unique(data1$transportation)[i], "_"))), collapse = " "), '\"', " Commute in 4 Boroughs", sep = ""),
+          subtitle = paste("Share of people in ",
+                           length(unique(data$census_tract)),
+                           " census tracts in Manhattan, Brooklyn, Bronx and Queens.",
+                           sep = "")) +
+
+    labs(caption = "US Census Bureau, 5 YR estimate, 2015") +
+    scale_y_continuous(labels = scales::percent) +
+    coord_flip() +
+    scale_fill_brewer(palette="Pastel2") + 
+    hear_theme 
+  # print(plot)
   ggsave(paste("/Users/ilyaperepelitsa/quant/census/",
                unique(data1$transportation)[i],
-               ".jpg", sep = ""),
-         plot, height = 10, width = 7)
+               ".pdf", sep = ""),
+         plot, height = 5, width = 15)
 }
 
+ 
 
 
 ### DISABILITY
@@ -259,14 +283,23 @@ data1 <- data %>% filter(!is.na(disability))
 
   
   plot <- data1 %>%  
-    ggplot(aes(x = reorder(borough, -disability),
+    ggplot(aes(x = reorder(borough, disability),
                y = disability,
                fill = borough)) +
     geom_boxplot() +
-    ggtitle("disability")
+    ggtitle("People with disabilities in 4 Boroughs", 
+            subtitle = paste("Share of people with disabilities in ",
+                             length(unique(data$census_tract)),
+                             " census tracts in Manhattan, Brooklyn, Bronx and Queens.",
+                             sep = "")) + 
+    labs(caption = "US Census Bureau, 5 YR estimate, 2015") +
+    scale_y_continuous(labels = scales::percent) +
+    coord_flip() +
+    scale_fill_brewer(palette="Pastel2") + 
+    hear_theme 
   print(plot)
-  ggsave("/Users/ilyaperepelitsa/quant/census/disability.jpg",
-         plot, height = 10, width = 7)
+  ggsave("/Users/ilyaperepelitsa/quant/census/disability.pdf",
+         plot, height = 5, width = 15)
 
 ### FAMILY SIZE
 data <- read.csv("/Users/ilyaperepelitsa/quant/census/family_size.csv")
@@ -276,16 +309,25 @@ data1 <- data %>% filter(!is.na(sixplus)) %>%
 for (i in 1:length(unique(data1$family_size))){
   
   plot <- data1 %>%  filter(family_size == unique(data1$family_size)[i]) %>% 
-    ggplot(aes(x = reorder(borough, -proportion),
+    ggplot(aes(x = reorder(borough, proportion),
                y = proportion,
                fill = borough)) +
     geom_boxplot() +
-    ggtitle(unique(data1$family_size)[i])
-  print(plot)
+    ggtitle(paste('Family of ', paste(str_to_title(unlist(strsplit(unique(data1$family_size)[i], "_"))), collapse = " - "),  " Persons in 4 Boroughs", sep = ""),
+            subtitle = paste("Share of people in ",
+                             length(unique(data$census_tract)),
+                             " census tracts in Manhattan, Brooklyn, Bronx and Queens.",
+                             sep = "")) +
+    
+    labs(caption = "US Census Bureau, 5 YR estimate, 2015") +
+    scale_y_continuous(labels = scales::percent) +
+    coord_flip() +
+    scale_fill_brewer(palette="Pastel2") + 
+    hear_theme 
   ggsave(paste("/Users/ilyaperepelitsa/quant/census/",
                unique(data1$family_size)[i],
-               ".jpg", sep = ""),
-         plot, height = 10, width = 7)
+               ".pdf", sep = ""),
+         plot, height = 5, width = 15)
 }
 
 
@@ -295,14 +337,23 @@ data1 <- data %>% filter(!is.na(non_family))
 
 
 plot <- data1 %>%  
-  ggplot(aes(x = reorder(borough, -non_family),
+  ggplot(aes(x = reorder(borough, non_family),
              y = non_family,
              fill = borough)) +
   geom_boxplot() +
-  ggtitle("non_family")
+  ggtitle("Non-family Households in 4 Boroughs", 
+               subtitle = paste("Share of people living alone or with roommates in ",
+              length(unique(data$census_tract)),
+                " census tracts in Manhattan, Brooklyn, Bronx and Queens.",
+                 sep = "")) + 
+  labs(caption = "US Census Bureau, 5 YR estimate, 2015") +
+  scale_y_continuous(labels = scales::percent) +
+  coord_flip() +
+  scale_fill_brewer(palette="Pastel2") + 
+  hear_theme 
 print(plot)
-ggsave("/Users/ilyaperepelitsa/quant/census/non_family.jpg",
-       plot, height = 10, width = 7)
+ggsave("/Users/ilyaperepelitsa/quant/census/non_family.pdf",
+       plot, height = 5, width = 15)
 
 
 ### MARITAL
@@ -313,14 +364,24 @@ data1 <- data %>% filter(!is.na(divorced)) %>%
 for (i in 1:length(unique(data1$status))){
   
   plot <- data1 %>%  filter(status == unique(data1$status)[i]) %>% 
-    ggplot(aes(x = reorder(borough, -proportion),
+    ggplot(aes(x = reorder(borough, proportion),
                y = proportion,
                fill = borough)) +
     geom_boxplot() +
-    ggtitle(unique(data1$status)[i])
+    ggtitle(paste('Share of ', paste(str_to_title(unlist(strsplit(unique(data1$status)[i], "_"))), collapse = " "),  " Persons in 4 Boroughs", sep = ""),
+            subtitle = paste("Share of people in ",
+                             length(unique(data$census_tract)),
+                             " census tracts in Manhattan, Brooklyn, Bronx and Queens.",
+                             sep = "")) +
+    
+    labs(caption = "US Census Bureau, 5 YR estimate, 2015") +
+    scale_y_continuous(labels = scales::percent) +
+    coord_flip() +
+    scale_fill_brewer(palette="Pastel2") + 
+    hear_theme 
   print(plot)
   ggsave(paste("/Users/ilyaperepelitsa/quant/census/",
                unique(data1$status)[i],
-               ".jpg", sep = ""),
-         plot, height = 10, width = 7)
+               ".pdf", sep = ""),
+         plot, height = 5, width = 15)
 }
