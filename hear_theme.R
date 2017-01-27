@@ -6,7 +6,7 @@ require('ggplot2')
 hear_theme <- theme(
   #dark gray grid lines with light background
   panel.grid.major = element_blank(),
-  panel.background = element_rect(fill = '#F0F0F0'),
+  panel.background = element_rect(fill = '#55555f'),
   
   #remove tickmarks and minor grid lines
   axis.ticks = element_blank(),
@@ -14,7 +14,7 @@ hear_theme <- theme(
   
   #add padding to chart and make background light gray
   plot.margin = unit(c(15, 15, 15, 15), 'point'),
-  plot.background = element_rect(fill = '#ffffff'),
+  plot.background = element_rect(fill = '#55555f'),
   
   #set axis text
   axis.text = element_text(color = '#444444', size = 14),
